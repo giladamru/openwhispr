@@ -1,0 +1,73 @@
+name: Build English Coach (macOS Apple Silicon)
+
+# Self-contained, no-secrets build of OpenWhispr + English Coach mode.
+# Produces an UNSIGNED macOS arm64 .dmg/.zip and publishes it to this fork's
+# Releases page so it can be downloaded directly. Signing/notarization are
+# disabled so it runs without Apple Developer secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/openwhispr-english-coach-VgjHX
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos-arm64:
+    runs-on: macos-latest # Apple Silicon runner (arm64)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create empty runtime env
+        run: |
+          printf '# unsigned personal build\n' > .env
+
+      - name: Build unsigned macOS arm64
+        # prebuild:mac (auto pre-hook) compiles native binaries and downloads
+        # whisper/llama/sherpa/qdrant/etc. The extra flags disable signing.
+        run: npm run build:mac -- --arm64 --publish never -c.mac.notarize=false -c.mac.identity=null
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: List build output
+        run: ls -lah dist || true
+
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: english-coach-macos-arm64
+          name: English Coach — macOS (Apple Silicon, unsigned)
+          body: |
+            Personal **unsigned** build of OpenWhispr with English Coach mode.
+
+            ## Install
+            1. Download the `.dmg` below.
+            2. Open it and drag **OpenWhispr** to Applications.
+            3. First launch (because it's unsigned): in Applications, **right-click
+               OpenWhispr → Open → Open**. macOS remembers it after the first time.
+
+            ## Use English Coach
+            - Open the app → Control Panel → **Language Models → English Coach** tab.
+            - Toggle **Enable English Coach mode**.
+            - (Optional) paste a **Google Text-to-Speech API key** for Chirp 3 HD voices;
+              without one, the Mac's built-in speech is used.
+            - Make sure a chat model is configured (Chat tab / a provider API key).
+            - Press your dictation hotkey, speak English, and the Coach window shows
+              5-section feedback and reads it aloud.
+          files: |
+            dist/*.dmg
+            dist/*.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
