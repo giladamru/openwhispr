@@ -13,6 +13,7 @@ import { useTheme } from "./hooks/useTheme";
 const ControlPanel = React.lazy(() => import("./components/ControlPanel.tsx"));
 const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"));
 const AgentOverlay = React.lazy(() => import("./components/AgentOverlay.tsx"));
+const CoachOverlay = React.lazy(() => import("./components/coach/CoachOverlay.tsx"));
 
 export default function AppRouter() {
   useTheme();
@@ -28,6 +29,14 @@ export default function AppRouter() {
 
   if (params.includes("transcription-preview=true")) {
     return <TranscriptionPreviewOverlay />;
+  }
+
+  if (params.includes("coach=true")) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <CoachOverlay />
+      </Suspense>
+    );
   }
 
   return <MainApp />;

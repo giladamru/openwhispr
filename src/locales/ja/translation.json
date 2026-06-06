@@ -49,7 +49,8 @@
   "window": {
     "voiceRecorderTitle": "ボイスレコーダー",
     "controlPanelTitle": "コントロールパネル",
-    "agentChatTitle": "エージェントチャット"
+    "agentChatTitle": "エージェントチャット",
+    "coachTitle": "English Coach"
   },
   "dialog": {
     "openLink": {
@@ -1526,7 +1527,8 @@
         "dictationCleanup": "ディクテーションのクリーンアップ",
         "dictationAgent": "Voice Agent",
         "noteFormatting": "ノートのフォーマット",
-        "chatIntelligence": "チャット"
+        "chatIntelligence": "チャット",
+        "englishCoach": "English Coach"
       }
     },
     "noteFormatting": {
@@ -2706,6 +2708,40 @@
       "successTitle": "Te uniste",
       "successDescription": "Bienvenido a {{name}}.",
       "errorTitle": "No se pudo aceptar la invitación"
+    }
+  },
+  "coach": {
+    "title": "English Coach",
+    "newConversation": "New conversation",
+    "close": "Close",
+    "emptyState": "Press your dictation hotkey and speak English. I'll help you sound more natural and keep the conversation going.",
+    "speak": "Read aloud",
+    "errorPrefix": "Coach error",
+    "sections": {
+      "whatISaid": "What I said",
+      "betterEnglish": "Better English",
+      "moreNatural": "More natural",
+      "explanationHe": "Explanation in Hebrew",
+      "continue": "Continue the conversation"
+    },
+    "settings": {
+      "title": "English Coach",
+      "description": "Turn dictation into a live spoken-English tutor: speak English and get structured feedback, read aloud.",
+      "enable": "Enable English Coach mode",
+      "enableDescription": "When on, your dictation hotkey opens the Coach instead of pasting transcribed text.",
+      "googleTtsApiKey": "Google Text-to-Speech API key",
+      "googleTtsApiKeyPlaceholder": "Paste your Google Cloud TTS API key",
+      "googleTtsApiKeyDescription": "Used for Chirp 3 HD voices (the only Google tier with Hebrew support). Without a key, the browser's built-in speech is used.",
+      "autoSpeak": "Read feedback aloud automatically",
+      "autoSpeakDescription": "Speak the coach's reply after each turn.",
+      "speakHebrew": "Read the Hebrew explanation aloud",
+      "speakHebrewDescription": "Also speak the Hebrew explanation, not just the English parts.",
+      "englishVoice": "English voice",
+      "englishVoiceDescription": "Chirp 3 HD voice for the English sections.",
+      "hebrewVoice": "Hebrew voice",
+      "hebrewVoiceDescription": "Chirp 3 HD voice for the Hebrew explanation.",
+      "promptTitle": "Coach instructions",
+      "promptDescription": "Customize how the coach corrects your English and replies."
     }
   }
 }

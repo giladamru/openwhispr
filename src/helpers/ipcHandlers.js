@@ -7071,6 +7071,20 @@ class IPCHandlers {
       return { success: true };
     });
 
+    ipcMain.handle("hide-coach-overlay", async () => {
+      this.windowManager.hideCoachOverlay();
+      return { success: true };
+    });
+
+    ipcMain.handle("get-coach-window-bounds", async () => {
+      return this.windowManager.getCoachWindowBounds();
+    });
+
+    ipcMain.handle("set-coach-window-bounds", async (_event, x, y, width, height) => {
+      this.windowManager.setCoachWindowBounds(x, y, width, height);
+      return { success: true };
+    });
+
     ipcMain.handle("acquire-recording-lock", async (_event, pipeline) => {
       if (this._activeRecordingPipeline && this._activeRecordingPipeline !== pipeline) {
         return { success: false, holder: this._activeRecordingPipeline };

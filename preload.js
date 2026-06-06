@@ -696,6 +696,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAgentWindowBounds: () => ipcRenderer.invoke("get-agent-window-bounds"),
   setAgentWindowBounds: (x, y, width, height) =>
     ipcRenderer.invoke("set-agent-window-bounds", x, y, width, height),
+
+  // English Coach mode
+  notifyAppModeChanged: (mode) => ipcRenderer.send("app-mode-changed", mode),
+  onCoachStartRecording: registerListener("coach-start-recording", (callback) => () => callback()),
+  onCoachStopRecording: registerListener("coach-stop-recording", (callback) => () => callback()),
+  onCoachToggleRecording: registerListener(
+    "coach-toggle-recording",
+    (callback) => () => callback()
+  ),
+  hideCoachOverlay: () => ipcRenderer.invoke("hide-coach-overlay"),
+  getCoachWindowBounds: () => ipcRenderer.invoke("get-coach-window-bounds"),
+  setCoachWindowBounds: (x, y, width, height) =>
+    ipcRenderer.invoke("set-coach-window-bounds", x, y, width, height),
   onPreviewText: registerListener("preview-text", (callback) => (_event, text) => callback(text)),
   onPreviewAppend: registerListener(
     "preview-append",

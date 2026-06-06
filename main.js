@@ -768,6 +768,11 @@ async function startApp() {
     environmentManager.saveActivationMode(mode);
   });
 
+  // English Coach mode: route the global dictation hotkey to the Coach window.
+  ipcMain.on("app-mode-changed", (_event, mode) => {
+    windowManager.setAppMode(mode);
+  });
+
   ipcMain.on("floating-icon-auto-hide-changed", (_event, enabled) => {
     windowManager.setFloatingIconAutoHide(enabled);
     environmentManager.saveFloatingIconAutoHide(enabled);
@@ -806,6 +811,10 @@ async function startApp() {
 
   // Create agent window (hidden) and set up agent hotkey
   await windowManager.createAgentWindow();
+
+  // Create English Coach window (hidden); the global hotkey drives it when
+  // appMode === "coach" (synced from the renderer via "app-mode-changed").
+  await windowManager.createCoachWindow();
 
   const agentHotkeyCallback = () => {
     if (hotkeyManager.isInListeningMode()) return;

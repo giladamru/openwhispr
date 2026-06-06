@@ -82,6 +82,21 @@ export interface ChatAgentSettings {
   chatAgentCustomApiKey: string;
 }
 
+export interface CoachSettings {
+  /** Top-level app mode: regular dictation vs. English Coach. */
+  appMode: "dictation" | "coach";
+  /** Google Cloud Text-to-Speech API key (Chirp 3 HD). Empty = Web Speech fallback. */
+  googleTtsApiKey: string;
+  /** Automatically read the coach's feedback aloud after each turn. */
+  coachAutoSpeak: boolean;
+  /** Also read the Hebrew explanation aloud (in addition to the English parts). */
+  coachSpeakHebrew: boolean;
+  /** Chirp 3 HD voice name used for English sections. */
+  coachEnglishVoice: string;
+  /** Chirp 3 HD voice name used for the Hebrew explanation. */
+  coachHebrewVoice: string;
+}
+
 function useSettingsInternal() {
   const store = useSettingsStore();
   const { setCustomDictionary } = store;
@@ -322,6 +337,18 @@ function useSettingsInternal() {
     updateTranscriptionSettings: store.updateTranscriptionSettings,
     updateCleanupSettings: store.updateCleanupSettings,
     updateApiKeys: store.updateApiKeys,
+    appMode: store.appMode,
+    setAppMode: store.setAppMode,
+    googleTtsApiKey: store.googleTtsApiKey,
+    setGoogleTtsApiKey: store.setGoogleTtsApiKey,
+    coachAutoSpeak: store.coachAutoSpeak,
+    setCoachAutoSpeak: store.setCoachAutoSpeak,
+    coachSpeakHebrew: store.coachSpeakHebrew,
+    setCoachSpeakHebrew: store.setCoachSpeakHebrew,
+    coachEnglishVoice: store.coachEnglishVoice,
+    setCoachEnglishVoice: store.setCoachEnglishVoice,
+    coachHebrewVoice: store.coachHebrewVoice,
+    setCoachHebrewVoice: store.setCoachHebrewVoice,
   };
 }
 

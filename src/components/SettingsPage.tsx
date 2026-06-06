@@ -31,6 +31,7 @@ import {
   Trash2,
   Info,
   MessageSquare,
+  GraduationCap,
   FileAudio,
   Wand2,
 } from "lucide-react";
@@ -76,6 +77,7 @@ import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
 import ChatAgentSettings from "./settings/ChatAgentSettings";
+import CoachSettings from "./settings/CoachSettings";
 import DictationAgentSettings from "./settings/DictationAgentSettings";
 import InferenceConfigEditor from "./settings/InferenceConfigEditor";
 import { MeetingTranscriptionPanel } from "./settings/MeetingSettings";
@@ -453,7 +455,12 @@ function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModel
 }
 
 type SpeechTab = "dictation" | "noteRecording";
-type LlmTab = "dictationCleanup" | "dictationAgent" | "noteFormatting" | "chatIntelligence";
+type LlmTab =
+  | "dictationCleanup"
+  | "dictationAgent"
+  | "noteFormatting"
+  | "chatIntelligence"
+  | "englishCoach";
 
 const SPEECH_TABS: SpeechTab[] = ["dictation", "noteRecording"];
 const LLM_TABS: LlmTab[] = [
@@ -461,6 +468,7 @@ const LLM_TABS: LlmTab[] = [
   "dictationAgent",
   "noteFormatting",
   "chatIntelligence",
+  "englishCoach",
 ];
 
 function useSubTab<T extends string>(storageKey: string, options: readonly T[], initial?: T) {
@@ -546,12 +554,14 @@ function LlmsTabs({
   renderDictationAgent,
   renderNoteFormatting,
   renderChatIntelligence,
+  renderEnglishCoach,
 }: {
   initialTab?: LlmTab;
   renderDictationCleanup: () => React.ReactNode;
   renderDictationAgent: () => React.ReactNode;
   renderNoteFormatting: () => React.ReactNode;
   renderChatIntelligence: () => React.ReactNode;
+  renderEnglishCoach: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useSubTab<LlmTab>("settings.llmsTab", LLM_TABS, initialTab);
@@ -561,6 +571,7 @@ function LlmsTabs({
     { id: "dictationAgent", name: t("settingsPage.llms.tabs.dictationAgent") },
     { id: "noteFormatting", name: t("settingsPage.llms.tabs.noteFormatting") },
     { id: "chatIntelligence", name: t("settingsPage.llms.tabs.chatIntelligence") },
+    { id: "englishCoach", name: t("settingsPage.llms.tabs.englishCoach") },
   ];
 
   return (
@@ -577,6 +588,7 @@ function LlmsTabs({
           if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
           if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
           if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
+          if (id === "englishCoach") return <GraduationCap className="w-3.5 h-3.5" />;
           return <MessageSquare className="w-3.5 h-3.5" />;
         }}
       />
@@ -584,6 +596,7 @@ function LlmsTabs({
       <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
       <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
       <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
+      <TabPanel active={tab === "englishCoach"}>{renderEnglishCoach()}</TabPanel>
     </div>
   );
 }
@@ -3964,6 +3977,7 @@ EOF`,
             )}
             renderDictationAgent={() => <DictationAgentSettings />}
             renderNoteFormatting={() => <NoteFormattingSettings />}
+            renderEnglishCoach={() => <CoachSettings />}
           />
         </TabPanel>
       )}

@@ -23,6 +23,7 @@ import type {
   PrivacySettings,
   ThemeSettings,
   ChatAgentSettings,
+  CoachSettings,
 } from "../hooks/useSettings";
 
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
@@ -137,6 +138,8 @@ const BOOLEAN_SETTINGS = new Set([
   "notifyCalendarReminders",
   "notifyUpdates",
   "gcalPrimaryOnly",
+  "coachAutoSpeak",
+  "coachSpeakHebrew",
 ]);
 
 const ARRAY_SETTINGS = new Set(["customDictionary", "gcalAccounts"]);
@@ -351,7 +354,8 @@ export interface SettingsState
     ApiKeySettings,
     PrivacySettings,
     ThemeSettings,
-    ChatAgentSettings {
+    ChatAgentSettings,
+    CoachSettings {
   isSignedIn: boolean;
   audioCuesEnabled: boolean;
   pauseMediaOnDictation: boolean;
@@ -530,6 +534,13 @@ export interface SettingsState
   setMeetingKey: (key: string) => void;
   setMeetingHotkeyLayoutMode: (mode: "side-panel" | "full-width") => void;
   setActivationMode: (mode: "tap" | "push") => void;
+
+  setAppMode: (mode: "dictation" | "coach") => void;
+  setGoogleTtsApiKey: (key: string) => void;
+  setCoachAutoSpeak: (value: boolean) => void;
+  setCoachSpeakHebrew: (value: boolean) => void;
+  setCoachEnglishVoice: (value: string) => void;
+  setCoachHebrewVoice: (value: string) => void;
 
   setPreferBuiltInMic: (value: boolean) => void;
   setSelectedMicDeviceId: (value: string) => void;
@@ -948,6 +959,15 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   chatAgentCloudBaseUrl: readString("chatAgentCloudBaseUrl", ""),
   chatAgentCustomApiKey: readString("chatAgentCustomApiKey", ""),
 
+  appMode: (readString("appMode", "dictation") === "coach" ? "coach" : "dictation") as
+    | "dictation"
+    | "coach",
+  googleTtsApiKey: readString("googleTtsApiKey", ""),
+  coachAutoSpeak: readBoolean("coachAutoSpeak", true),
+  coachSpeakHebrew: readBoolean("coachSpeakHebrew", true),
+  coachEnglishVoice: readString("coachEnglishVoice", "en-US-Chirp3-HD-Charon"),
+  coachHebrewVoice: readString("coachHebrewVoice", "he-IL-Chirp3-HD-Charon"),
+
   dictationAgentMode: (() => {
     const v = readString("dictationAgentMode", "");
     if (
@@ -1186,6 +1206,21 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       window.electronAPI?.notifyActivationModeChanged?.(mode);
     }
   },
+
+  setAppMode: (mode: "dictation" | "coach") => {
+    const next = mode === "coach" ? "coach" : "dictation";
+    if (isBrowser) localStorage.setItem("appMode", next);
+    set({ appMode: next });
+    if (isBrowser) {
+      // Let the main process route the global hotkey to the Coach window.
+      window.electronAPI?.notifyAppModeChanged?.(next);
+    }
+  },
+  setGoogleTtsApiKey: createStringSetter("googleTtsApiKey"),
+  setCoachAutoSpeak: createBooleanSetter("coachAutoSpeak"),
+  setCoachSpeakHebrew: createBooleanSetter("coachSpeakHebrew"),
+  setCoachEnglishVoice: createStringSetter("coachEnglishVoice"),
+  setCoachHebrewVoice: createStringSetter("coachHebrewVoice"),
 
   setPreferBuiltInMic: createBooleanSetter("preferBuiltInMic"),
   setSelectedMicDeviceId: createStringSetter("selectedMicDeviceId"),
@@ -1756,6 +1791,18 @@ export async function initializeSettings(): Promise<void> {
     } catch (err) {
       logger.warn(
         "Failed to sync activation mode on startup",
+        { error: (err as Error).message },
+        "settings"
+      );
+    }
+
+    // Tell the main process the current app mode so the global hotkey routes to
+    // the Coach window when coach mode is active (main can't read localStorage).
+    try {
+      window.electronAPI?.notifyAppModeChanged?.(useSettingsStore.getState().appMode);
+    } catch (err) {
+      logger.warn(
+        "Failed to sync app mode on startup",
         { error: (err as Error).message },
         "settings"
       );

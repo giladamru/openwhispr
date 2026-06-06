@@ -258,10 +258,18 @@ const AGENT_OVERLAY_CONFIG = {
   },
 };
 
+// English Coach window — same floating-overlay shape as the agent overlay.
+const COACH_OVERLAY_CONFIG = {
+  ...AGENT_OVERLAY_CONFIG,
+  width: 460,
+  height: 420,
+};
+
 module.exports = {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
   AGENT_OVERLAY_CONFIG,
+  COACH_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,

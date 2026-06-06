@@ -155,6 +155,7 @@ class AudioManager {
     this.streamingFallbackChunks = [];
     this.skipReasoning = false;
     this.context = "dictation";
+    this.languageOverride = null;
     this.sttConfig = null;
     this.lastAudioBlob = null;
     this.lastAudioMetadata = null;
@@ -230,6 +231,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   setContext(context) {
     this.context = context;
+  }
+
+  /**
+   * Force a transcription language for this instance regardless of the global
+   * `preferredLanguage` setting. Used by English Coach Mode to force English.
+   * Pass null/"" to clear the override.
+   */
+  setLanguageOverride(lang) {
+    this.languageOverride = lang || null;
+  }
+
+  /** Returns the effective preferred-language value, honoring any instance override. */
+  _resolvePreferredLanguage(settings) {
+    if (this.languageOverride) return this.languageOverride;
+    return (settings || getSettings()).preferredLanguage;
   }
 
   setSttConfig(config) {
@@ -450,7 +466,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
           const provider = localTranscriptionProvider === "nvidia" ? "nvidia" : "whisper";
           const model = provider === "nvidia" ? parakeetModel : whisperModel;
-          const language = getBaseLanguageCode(getSettings().preferredLanguage);
+          const language = getBaseLanguageCode(this._resolvePreferredLanguage());
           window.electronAPI?.startDictationPreview?.({ provider, model, language });
         } catch (e) {
           logger.warn("Preview worklet setup failed", { error: e.message }, "audio");
@@ -676,7 +692,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       // Send original audio to main process - FFmpeg in main process handles conversion
       // (renderer-side AudioContext conversion was unreliable with WebM/Opus format)
       const arrayBuffer = await audioBlob.arrayBuffer();
-      const language = getBaseLanguageCode(getSettings().preferredLanguage);
+      const language = getBaseLanguageCode(this._resolvePreferredLanguage());
       const options = { model };
       if (language) {
         options.language = language;
@@ -1407,7 +1423,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   async processWithOpenAIAPI(audioBlob, metadata = {}) {
     const timings = {};
     const apiSettings = getSettings();
-    const language = getBaseLanguageCode(apiSettings.preferredLanguage);
+    const language = getBaseLanguageCode(this._resolvePreferredLanguage(apiSettings));
     const allowLocalFallback = apiSettings.allowLocalFallback;
     const fallbackModel = apiSettings.fallbackWhisperModel || "base";
 
@@ -2072,11 +2088,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const [, wsResult] = await Promise.all([
         this.cacheMicrophoneDeviceId(),
         withSessionRefresh(async () => {
-          const {
-            preferredLanguage: warmupLang,
-            cloudTranscriptionModel,
-            cloudTranscriptionMode,
-          } = getSettings();
+          const { cloudTranscriptionModel, cloudTranscriptionMode } = getSettings();
+          const warmupLang = this._resolvePreferredLanguage();
           const res = await provider.warmup({
             sampleRate: 16000,
             language: warmupLang && warmupLang !== "auto" ? warmupLang : undefined,
@@ -2293,12 +2306,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       // 4. Connect WebSocket — audio is already flowing from the pipeline above,
       //    so Deepgram receives data immediately (no idle timeout).
       const result = await withSessionRefresh(async () => {
-        const {
-          preferredLanguage: preferredLang,
-          cloudTranscriptionModel,
-          cloudTranscriptionMode,
-          useLocalWhisper,
-        } = getSettings();
+        const { cloudTranscriptionModel, cloudTranscriptionMode, useLocalWhisper } = getSettings();
+        const preferredLang = this._resolvePreferredLanguage();
         const res = await provider.start({
           sampleRate: 16000,
           language: preferredLang && preferredLang !== "auto" ? preferredLang : undefined,
@@ -2520,7 +2529,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const streamingSttModel = stopResult?.model || "nova-3";
     const streamingSttProcessingMs = Math.round(tTerminate - t0);
     const streamingAudioBytesSent = stopResult?.audioBytesSent || 0;
-    const streamingSttLanguage = getBaseLanguageCode(stSettings.preferredLanguage) || undefined;
+    const streamingSttLanguage =
+      getBaseLanguageCode(this._resolvePreferredLanguage(stSettings)) || undefined;
     const streamingSttWordCount = finalText ? finalText.split(/\s+/).filter(Boolean).length : 0;
 
     let usedCloudReasoning = false;

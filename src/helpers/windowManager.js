@@ -11,6 +11,7 @@ const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
   AGENT_OVERLAY_CONFIG,
+  COACH_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
@@ -23,6 +24,8 @@ class WindowManager {
     this.mainWindow = null;
     this.controlPanelWindow = null;
     this.agentWindow = null;
+    this.coachWindow = null;
+    this.appMode = "dictation";
     this.notificationWindow = null;
     this._notificationTimeout = null;
     this.transcriptionPreviewWindow = null;
@@ -183,11 +186,13 @@ class WindowManager {
     return { success: true, bounds: { x: newX, y: newY, ...newSize } };
   }
 
-  async loadWindowContent(window, isControlPanel = false, isAgent = false) {
+  async loadWindowContent(window, isControlPanel = false, isAgent = false, isCoach = false) {
     if (process.env.NODE_ENV === "development") {
       let appUrl = DevServerManager.getAppUrl(isControlPanel);
       if (isAgent) {
         appUrl = `${DevServerManager.getAppUrl(false)}?agent=true`;
+      } else if (isCoach) {
+        appUrl = `${DevServerManager.getAppUrl(false)}?coach=true`;
       }
       await DevServerManager.waitForDevServer();
       await window.loadURL(appUrl);
@@ -199,6 +204,8 @@ class WindowManager {
 
       if (isAgent) {
         fileInfo.query = { agent: "true" };
+      } else if (isCoach) {
+        fileInfo.query = { coach: "true" };
       }
 
       const fs = require("fs");
@@ -444,6 +451,11 @@ class WindowManager {
     if (this.hotkeyManager.isInListeningMode()) {
       return;
     }
+    // In English Coach mode the global hotkey drives the Coach window instead.
+    if (this.appMode === "coach") {
+      this.toggleCoachOverlay();
+      return;
+    }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.showDictationPanel();
       this.mainWindow.webContents.send("toggle-dictation");
@@ -454,6 +466,10 @@ class WindowManager {
 
   sendStartDictation() {
     if (this.hotkeyManager.isInListeningMode()) {
+      return;
+    }
+    if (this.appMode === "coach") {
+      this.startCoachRecording();
       return;
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -467,10 +483,22 @@ class WindowManager {
     if (this.hotkeyManager.isInListeningMode()) {
       return;
     }
+    if (this.appMode === "coach") {
+      this.stopCoachRecording();
+      return;
+    }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send("stop-dictation");
       this._isDictatingToggle = false;
       this.meetingDetectionEngine?.setUserRecording(false);
+    }
+  }
+
+  setAppMode(mode) {
+    this.appMode = mode === "coach" ? "coach" : "dictation";
+    // Leaving coach mode should not leave the Coach window lingering.
+    if (this.appMode !== "coach") {
+      this.hideCoachOverlay();
     }
   }
 
@@ -753,6 +781,112 @@ class WindowManager {
     this._clearAgentAnimation();
     this.agentWindow.webContents.send("agent-stop-recording");
     this.agentWindow.hide();
+  }
+
+  async createCoachWindow() {
+    if (this.coachWindow && !this.coachWindow.isDestroyed()) {
+      return;
+    }
+
+    this.coachWindow = new BrowserWindow(COACH_OVERLAY_CONFIG);
+
+    this.coachWindow.once("ready-to-show", () => {
+      WindowPositionUtil.setupAlwaysOnTop(this.coachWindow);
+    });
+
+    this.coachWindow.webContents.on("did-finish-load", () => {
+      this.coachWindow.setTitle(i18nMain.t("window.coachTitle"));
+    });
+
+    this.coachWindow.on("closed", () => {
+      this.coachWindow = null;
+    });
+
+    await this.loadWindowContent(this.coachWindow, false, false, true);
+  }
+
+  toggleCoachOverlay() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+
+    if (this.coachWindow.isVisible()) {
+      this.coachWindow.webContents.send("coach-toggle-recording");
+    } else {
+      // First press: reveal the Coach window and start listening immediately,
+      // mirroring the dictation hotkey's record-on-press behavior.
+      this.showCoachOverlay();
+      this.coachWindow.webContents.send("coach-start-recording");
+    }
+  }
+
+  startCoachRecording() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+    this.showCoachOverlay();
+    this.coachWindow.webContents.send("coach-start-recording");
+  }
+
+  stopCoachRecording() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+    this.coachWindow.webContents.send("coach-stop-recording");
+  }
+
+  showCoachOverlay() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+
+    const mainBounds =
+      this.mainWindow && !this.mainWindow.isDestroyed() ? this.mainWindow.getBounds() : null;
+    const refPoint = mainBounds || { x: 0, y: 0 };
+    const display = screen.getDisplayNearestPoint({ x: refPoint.x, y: refPoint.y });
+    const workArea = display.workArea || display.bounds;
+
+    const width = COACH_OVERLAY_CONFIG.width;
+    const height = Math.min(COACH_OVERLAY_CONFIG.height, workArea.height);
+
+    let x = workArea.x + Math.round((workArea.width - width) / 2);
+    let y = workArea.y + Math.round((workArea.height - height) / 2);
+    if (mainBounds) {
+      x = mainBounds.x + Math.round((mainBounds.width - width) / 2);
+      x = Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - width));
+    }
+
+    this.coachWindow.setBounds({ x, y, width, height });
+
+    WindowPositionUtil.setupAlwaysOnTop(this.coachWindow);
+
+    if (typeof this.coachWindow.showInactive === "function") {
+      this.coachWindow.showInactive();
+    } else {
+      this.coachWindow.show();
+    }
+  }
+
+  hideCoachOverlay() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+
+    this.coachWindow.webContents.send("coach-stop-recording");
+    this.coachWindow.hide();
+  }
+
+  getCoachWindowBounds() {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return null;
+    return this.coachWindow.getBounds();
+  }
+
+  setCoachWindowBounds(x, y, width, height) {
+    if (!this.coachWindow || this.coachWindow.isDestroyed()) return;
+
+    const bounds = {
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.max(COACH_OVERLAY_CONFIG.minWidth, Math.round(width)),
+      height: Math.max(COACH_OVERLAY_CONFIG.minHeight, Math.round(height)),
+    };
+
+    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
+    const workArea = display.workArea || display.bounds;
+    bounds.width = Math.min(bounds.width, workArea.width);
+    bounds.height = Math.min(bounds.height, workArea.y + workArea.height - bounds.y);
+
+    this.coachWindow.setBounds(bounds);
   }
 
   async ensureTranscriptionPreviewWindow() {

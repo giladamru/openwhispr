@@ -1456,6 +1456,20 @@ declare global {
       onAgentStopRecording?: (callback: () => void) => () => void;
       onAgentToggleRecording?: (callback: () => void) => () => void;
 
+      // English Coach overlay
+      notifyAppModeChanged?: (mode: "dictation" | "coach") => void;
+      onCoachStartRecording?: (callback: () => void) => () => void;
+      onCoachStopRecording?: (callback: () => void) => () => void;
+      onCoachToggleRecording?: (callback: () => void) => () => void;
+      hideCoachOverlay?: () => Promise<void>;
+      getCoachWindowBounds?: () => Promise<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      } | null>;
+      setCoachWindowBounds?: (x: number, y: number, width: number, height: number) => Promise<void>;
+
       // Agent cloud streaming (event-based)
       startAgentStream?: (
         messages: Array<{ role: string; content: string | Array<unknown> }>,
