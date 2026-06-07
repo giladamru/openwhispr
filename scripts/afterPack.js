@@ -222,6 +222,32 @@ function verifyMeetingAecHelper(context) {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Ad-hoc signing (unsigned personal builds)
+// ---------------------------------------------------------------------------
+
+// Apple Silicon refuses to run arm64 code that has no signature at all
+// ("…is damaged and can't be opened"). For unsigned personal builds (no Apple
+// Developer cert) we ad-hoc sign the whole bundle so it can launch after the
+// user clears quarantine / right-click→Open. Guarded by ADHOC_SIGN=1 so the
+// official notarized pipeline is never affected.
+function adhocSignMacApp(context) {
+  if (context.electronPlatformName !== "darwin") return;
+  if (process.env.ADHOC_SIGN !== "1") return;
+
+  const appPath = resolveAppPath(context);
+  if (!fs.existsSync(appPath)) {
+    console.warn(`  afterPack: ad-hoc sign skipped, app not found at ${appPath}`);
+    return;
+  }
+
+  execFileSync("codesign", ["--force", "--deep", "--sign", "-", appPath], {
+    stdio: "inherit",
+  });
+  console.log(`  afterPack: ad-hoc signed ${path.basename(appPath)} (unsigned personal build)`);
+}
+
+// ---------------------------------------------------------------------------
 // Main hook
 // ---------------------------------------------------------------------------
 
@@ -230,4 +256,5 @@ exports.default = async function (context) {
   wrapLinuxBinary(context);
   verifyMeetingAecHelper(context);
   registerMacResourceBinariesForSigning(context);
+  adhocSignMacApp(context);
 };

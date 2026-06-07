@@ -33,14 +33,21 @@ jobs:
         run: |
           printf '# unsigned personal build\n' > .env
 
-      - name: Build unsigned macOS arm64
+      - name: Build unsigned (ad-hoc signed) macOS arm64
         # prebuild:mac (auto pre-hook) compiles native binaries and downloads
-        # whisper/llama/sherpa/qdrant/etc. The extra flags disable signing.
+        # whisper/llama/sherpa/qdrant/etc. We skip real signing/notarization
+        # (no Apple cert) but ADHOC_SIGN=1 makes afterPack.js ad-hoc sign the
+        # bundle so it can launch on Apple Silicon (otherwise macOS reports the
+        # app as "damaged").
         run: npm run build:mac -- --arm64 --publish never -c.mac.notarize=false -c.mac.identity=null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          ADHOC_SIGN: "1"
+
+      - name: Verify ad-hoc signature
+        run: codesign -dv --verbose=2 "dist/mac-arm64/OpenWhispr.app" 2>&1 | sed -n '1,12p'
 
       - name: List build output
         run: ls -lah dist || true
@@ -58,6 +65,14 @@ jobs:
             2. Open it and drag **OpenWhispr** to Applications.
             3. First launch (because it's unsigned): in Applications, **right-click
                OpenWhispr → Open → Open**. macOS remembers it after the first time.
+
+            ### If macOS still says the app "is damaged"
+            The app is ad-hoc signed, but if Gatekeeper still blocks it, clear the
+            download quarantine flag (Terminal):
+            ```
+            xattr -dr com.apple.quarantine /Applications/OpenWhispr.app
+            ```
+            then open it normally.
 
             ## Use English Coach
             - Open the app → Control Panel → **Language Models → English Coach** tab.
